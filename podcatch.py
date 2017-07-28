@@ -1,8 +1,16 @@
-from flask import Flask, jsonify
+from flask import jsonify
 from flask import abort
-from flask import make_response
+from flask import Flask, request, make_response
+from flask_restful import Resource, Api
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+from utils.mongo_json_encoder import JSONEncoder
+
 
 app = Flask(__name__)
+mongo = MongoClient('localhost', 27017)
+app.db = mongo.develop_database
+api = Api(app)
 
 podcasts = [
     {
@@ -21,6 +29,12 @@ podcasts = [
     }
 ]
 
+@api.representation('application/json')
+def output_json(data, code, headers=None):
+    resp = make_response(JSONEncoder().encode(data), code)
+    resp.headers.extend(headers or {})
+    return resp
+
 @app.route('/podcatch/api/v1.0/podcasts', methods=['GET'])
 def get_podcasts():
     return jsonify({'podcasts': podcasts})
@@ -35,10 +49,6 @@ def get_task(podcast_id):
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
-
-@auth.error_handler
-def unauthorized():
-    return make_response(jsonify({'error': 'Unauthorized access'}), 403)
 
 if __name__ == '__main__':
     app.run(debug=True)
